@@ -534,7 +534,14 @@ static void snull_hw_tx(char *buf, int len, struct net_device *dev)
     /*----------------------------------------------------------
      * Ethhdr is 14 bytes, but the kernel arranges for iphdr
      * to be aligned (i.e., ethhdr is unaligned)
-     *----------------------------------------------------------*/
+     * buf : skb->data -> --------------------- pointer to actual data 
+     *                    | Ethernet header   |
+     *                    ---------------------
+     *                    |    IP header      |
+     *                    ---------------------
+     *                    |    Data           |
+     *                    ---------------------
+     ************************************************************/
     /* [cgw]: 提取本地和目标IP地址 */
     ih = (struct iphdr *)(buf+sizeof(struct ethhdr));
     saddr = &ih->saddr;
@@ -590,9 +597,11 @@ static void snull_hw_tx(char *buf, int len, struct net_device *dev)
 
     /* [cgw]: 填充发送网卡的数据 */
     memcpy(tx_buffer->data, buf, len);
-    /* [cgw]: 把发送的数据直接加入到接收队列，这里相当于本地网卡要发送的数据
-    * 已经给目标网卡直接接收到了
-    */
+    
+    /* -----------------------------------------------------------------------
+     * [cgw]: 把发送的数据直接加入到接收队列，这里相当于本地网卡要发送的数据
+     * 已经给目标网卡直接接收到了
+     *------------------------------------------------------------------------*/
     snull_enqueue_buf(dest, tx_buffer);
     /* [cgw]: 如果接收中断使能，这个也是模拟的接收中断，因为上面已经模拟接收
     * 到数据，所以立刻产生一个中断
@@ -840,10 +849,10 @@ void snull_init(struct net_device *dev)
 {
     struct snull_priv *priv;
  
-    /* *********************
+    /* -------------------------------------------
      * Then, assign other fields in dev, using ether_setup() and some
      * hand assignments
-     *****************************************************************/
+     * -----------------------------------------------------------------*/
     ether_setup(dev); /* assign some of the fields */
     dev->watchdog_timeo = timeout;
     
